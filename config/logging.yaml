@@ -1,0 +1,66 @@
+version: 1
+formatters:
+  detailed:
+    format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+  json:
+    format: "%(message)s"
+    class: "pythonjsonlogger.jsonlogger.JsonFormatter"
+
+handlers:
+  console:
+    class: "logging.StreamHandler"
+    level: "INFO"
+    formatter: "detailed"
+    stream: "ext://sys.stdout"
+
+  file_market:
+    class: "logging.handlers.RotatingFileHandler"
+    level: "DEBUG"
+    formatter: "json"
+    filename: "logs/market/market.log"
+    maxBytes: 10485760
+    backupCount: 5
+
+  file_training:
+    class: "logging.handlers.RotatingFileHandler"
+    level: "DEBUG"
+    formatter: "json"
+    filename: "logs/training/training.log"
+    maxBytes: 10485760
+    backupCount: 5
+
+  file_simulator:
+    class: "logging.handlers.RotatingFileHandler"
+    level: "DEBUG"
+    formatter: "json"
+    filename: "logs/simulator/simulator.log"
+    maxBytes: 10485760
+    backupCount: 5
+
+  file_errors:
+    class: "logging.handlers.RotatingFileHandler"
+    level: "ERROR"
+    formatter: "detailed"
+    filename: "logs/errors/errors.log"
+    maxBytes: 10485760
+    backupCount: 5
+
+loggers:
+  market:
+    level: "DEBUG"
+    handlers: ["console", "file_market", "file_errors"]
+    propagate: false
+
+  training:
+    level: "DEBUG"
+    handlers: ["console", "file_training", "file_errors"]
+    propagate: false
+
+  simulator:
+    level: "DEBUG"
+    handlers: ["console", "file_simulator", "file_errors"]
+    propagate: false
+
+root:
+  level: "INFO"
+  handlers: ["console", "file_errors"]

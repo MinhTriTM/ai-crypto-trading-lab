@@ -1,0 +1,38 @@
+simulator:
+  initial_balance: 1000.0
+  base_currency: "USDT"
+  default_quote: "USDT"
+
+matching:
+  mode: "realistic"  # realistic | instant
+  partial_fill: true
+  queue_model: "price_time_priority"
+
+execution:
+  latency:
+    data_latency_ms: 4.3   # độ trễ nhìn thấy dữ liệu
+    order_latency_ms: 8.1  # độ trễ gửi lệnh tới sàn ảo
+    jitter_ms: 2.0
+  slippage:
+    model: "spread_based"  # spread_based | volume_based | fixed
+    spread_multiplier: 0.5
+    volume_impact: 0.0001
+  spread:
+    use_real_spread: true
+    min_spread_bps: 1
+
+fees:
+  maker: 0.0002  # 0.02%
+  taker: 0.0004  # 0.04%
+  funding_interval_hours: 8
+
+derivatives:
+  max_leverage: 10
+  default_leverage: 2
+  maintenance_margin_rate: 0.005  # 0.5%
+  liquidation_fee: 0.001
+  bankruptcy_threshold: 0.0
+
+clock:
+  use_market_clock: true
+  enforce_no_lookahead: true  # cấm nhìn tương lai

@@ -1,0 +1,40 @@
+postgres:
+  host: "${POSTGRES_HOST:localhost}"
+  port: 5432
+  database: "ai_crypto_lab"
+  user: "lab_user"
+  password: "${POSTGRES_PASSWORD:lab_password}"
+  pool_size: 20
+  max_overflow: 10
+  dsn: "postgresql+asyncpg://lab_user:lab_password@localhost:5432/ai_crypto_lab"
+
+clickhouse:
+  host: "${CLICKHOUSE_HOST:localhost}"
+  port: 9000
+  database: "market_data"
+  user: "default"
+  password: ""
+  tables:
+    trades: "trades"
+    orderbook: "orderbook"
+    funding: "funding"
+    features: "features"
+
+redis:
+  host: "${REDIS_HOST:localhost}"
+  port: 6379
+  db: 0
+  password: ""
+  prefix: "lab:"
+
+parquet:
+  compression: "zstd"
+  row_group_size: 100000
+  base_path: "data/processed"
+
+repositories:
+  market: "clickhouse"
+  account: "postgres"
+  trade: "postgres"
+  episode: "postgres"
+  model: "postgres"

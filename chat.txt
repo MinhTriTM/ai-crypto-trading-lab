@@ -1,0 +1,798 @@
+Có. Tôi đề xuất V1 theo hướng tách rõ dữ liệu thị trường thật, sàn ảo, tài khoản ảo, AI, training và realtime như sau:
+ai-crypto-trading-lab/
+│
+├── README.md
+├── .env
+├── .env.example
+├── docker-compose.yml
+├── pyproject.toml
+├── requirements.txt
+│
+├── config/
+│   ├── app.yaml
+│   ├── database.yaml
+│   ├── exchanges.yaml
+│   ├── markets.yaml
+│   ├── simulator.yaml
+│   ├── training.yaml
+│   ├── risk.yaml
+│   └── logging.yaml
+│
+├── data/
+│   │
+│   ├── raw/
+│   │   ├── binance/
+│   │   │   ├── spot/
+│   │   │   │   ├── BTCUSDT/
+│   │   │   │   │   ├── trades/
+│   │   │   │   │   ├── orderbook/
+│   │   │   │   │   └── ticker/
+│   │   │   │   └── ETHUSDT/
+│   │   │   │
+│   │   │   └── futures/
+│   │   │       ├── BTCUSDT/
+│   │   │       │   ├── trades/
+│   │   │       │   ├── orderbook/
+│   │   │       │   ├── funding/
+│   │   │       │   ├── mark_price/
+│   │   │       │   ├── liquidations/
+│   │   │       │   └── open_interest/
+│   │   │       └── ETHUSDT/
+│   │   │
+│   │   ├── bybit/
+│   │   ├── okx/
+│   │   └── coinbase/
+│   │
+│   ├── processed/
+│   │   ├── ticks/
+│   │   ├── orderbooks/
+│   │   ├── features/
+│   │   └── market_states/
+│   │
+│   ├── historical/
+│   │   ├── train/
+│   │   ├── validation/
+│   │   └── test/
+│   │
+│   └── synthetic/
+│       ├── bull/
+│       ├── bear/
+│       ├── sideways/
+│       ├── flash_crash/
+│       └── volatility_spike/
+│
+├── src/
+│   │
+│   ├── main.py
+│   │
+│   ├── market/
+│   │   ├── __init__.py
+│   │   │
+│   │   ├── collectors/
+│   │   │   ├── base_collector.py
+│   │   │   ├── binance_ws.py
+│   │   │   ├── bybit_ws.py
+│   │   │   ├── okx_ws.py
+│   │   │   └── coinbase_ws.py
+│   │   │
+│   │   ├── events/
+│   │   │   ├── trade_event.py
+│   │   │   ├── orderbook_event.py
+│   │   │   ├── funding_event.py
+│   │   │   ├── liquidation_event.py
+│   │   │   └── market_event.py
+│   │   │
+│   │   ├── orderbook/
+│   │   │   ├── orderbook.py
+│   │   │   ├── snapshot.py
+│   │   │   ├── delta.py
+│   │   │   └── reconstruction.py
+│   │   │
+│   │   ├── features/
+│   │   │   ├── price.py
+│   │   │   ├── volume.py
+│   │   │   ├── volatility.py
+│   │   │   ├── orderflow.py
+│   │   │   ├── imbalance.py
+│   │   │   ├── funding.py
+│   │   │   └── feature_engine.py
+│   │   │
+│   │   └── clock/
+│   │       ├── market_clock.py
+│   │       ├── latency_clock.py
+│   │       └── timestamp.py
+│   │
+│   ├── replay/
+│   │   ├── historical_replay.py
+│   │   ├── event_replay.py
+│   │   ├── replay_clock.py
+│   │   └── replay_session.py
+│   │
+│   ├── exchange_simulator/
+│   │   │
+│   │   ├── virtual_exchange.py
+│   │   │
+│   │   ├── matching/
+│   │   │   ├── matching_engine.py
+│   │   │   ├── market_order.py
+│   │   │   ├── limit_order.py
+│   │   │   └── partial_fill.py
+│   │   │
+│   │   ├── execution/
+│   │   │   ├── execution_engine.py
+│   │   │   ├── latency.py
+│   │   │   ├── slippage.py
+│   │   │   └── spread.py
+│   │   │
+│   │   ├── fees/
+│   │   │   ├── maker_taker.py
+│   │   │   ├── funding.py
+│   │   │   └── fee_engine.py
+│   │   │
+│   │   └── derivatives/
+│   │       ├── leverage.py
+│   │       ├── margin.py
+│   │       ├── maintenance_margin.py
+│   │       └── liquidation.py
+│   │
+│   ├── portfolio/
+│   │   ├── account.py
+│   │   ├── virtual_account.py
+│   │   ├── wallet.py
+│   │   ├── balance.py
+│   │   ├── position.py
+│   │   ├── order.py
+│   │   ├── trade.py
+│   │   └── pnl.py
+│   │
+│   ├── risk/
+│   │   ├── risk_engine.py
+│   │   ├── position_sizing.py
+│   │   ├── exposure.py
+│   │   ├── drawdown.py
+│   │   ├── leverage_limit.py
+│   │   └── bankruptcy.py
+│   │
+│   ├── ai/
+│   │   │
+│   │   ├── agent/
+│   │   │   ├── trading_agent.py
+│   │   │   ├── policy.py
+│   │   │   └── decision.py
+│   │   │
+│   │   ├── state/
+│   │   │   ├── market_state.py
+│   │   │   ├── portfolio_state.py
+│   │   │   ├── goal_state.py
+│   │   │   └── state_builder.py
+│   │   │
+│   │   ├── actions/
+│   │   │   ├── action.py
+│   │   │   ├── hold.py
+│   │   │   ├── long.py
+│   │   │   ├── short.py
+│   │   │   └── position_target.py
+│   │   │
+│   │   ├── reward/
+│   │   │   ├── reward_engine.py
+│   │   │   ├── profit_reward.py
+│   │   │   ├── risk_penalty.py
+│   │   │   ├── drawdown_penalty.py
+│   │   │   └── target_reward.py
+│   │   │
+│   │   └── models/
+│   │       ├── actor.py
+│   │       ├── critic.py
+│   │       ├── transformer.py
+│   │       └── checkpoints/
+│   │
+│   ├── historical_intelligence/
+│   │   ├── similarity/
+│   │   │   ├── state_encoder.py
+│   │   │   ├── nearest_neighbors.py
+│   │   │   └── vector_index.py
+│   │   │
+│   │   ├── statistics/
+│   │   │   ├── future_returns.py
+│   │   │   ├── probability.py
+│   │   │   └── confidence.py
+│   │   │
+│   │   └── pattern_memory.py
+│   │
+│   ├── branching/
+│   │   │
+│   │   ├── branch.py
+│   │   ├── branch_state.py
+│   │   ├── branch_generator.py
+│   │   ├── branch_executor.py
+│   │   │
+│   │   ├── dimensions/
+│   │   │   ├── asset.py
+│   │   │   ├── direction.py
+│   │   │   ├── position_size.py
+│   │   │   ├── leverage.py
+│   │   │   ├── time_offset.py
+│   │   │   ├── latency.py
+│   │   │   ├── exit_time.py
+│   │   │   └── market_scenario.py
+│   │   │
+│   │   ├── pruning/
+│   │   │   ├── scorer.py
+│   │   │   ├── branch_pruner.py
+│   │   │   └── diversity_filter.py
+│   │   │
+│   │   └── population/
+│   │       ├── population.py
+│   │       ├── selection.py
+│   │       ├── mutation.py
+│   │       ├── crossover.py
+│   │       └── novelty.py
+│   │
+│   ├── training/
+│   │   │
+│   │   ├── trainer.py
+│   │   ├── distributed_trainer.py
+│   │   ├── vector_env.py
+│   │   │
+│   │   ├── algorithms/
+│   │   │   ├── ppo.py
+│   │   │   ├── sac.py
+│   │   │   ├── td3.py
+│   │   │   └── evolutionary.py
+│   │   │
+│   │   ├── experience/
+│   │   │   ├── experience.py
+│   │   │   ├── replay_buffer.py
+│   │   │   ├── rollout_buffer.py
+│   │   │   └── sampler.py
+│   │   │
+│   │   └── curriculum/
+│   │       ├── curriculum.py
+│   │       ├── difficulty.py
+│   │       └── market_regime.py
+│   │
+│   ├── simulation/
+│   │   ├── environment.py
+│   │   ├── episode.py
+│   │   ├── episode_runner.py
+│   │   ├── parallel_runner.py
+│   │   ├── scenario.py
+│   │   └── event_queue.py
+│   │
+│   ├── evaluation/
+│   │   ├── evaluator.py
+│   │   ├── backtest.py
+│   │   ├── walk_forward.py
+│   │   ├── stress_test.py
+│   │   ├── robustness.py
+│   │   └── metrics/
+│   │       ├── return_metrics.py
+│   │       ├── drawdown.py
+│   │       ├── sharpe.py
+│   │       ├── win_rate.py
+│   │       ├── survival_rate.py
+│   │       └── target_success_rate.py
+│   │
+│   ├── paper_trading/
+│   │   ├── live_engine.py
+│   │   ├── live_account.py
+│   │   ├── live_decision.py
+│   │   └── performance_tracker.py
+│   │
+│   ├── storage/
+│   │   ├── database.py
+│   │   ├── postgres.py
+│   │   ├── clickhouse.py
+│   │   ├── redis.py
+│   │   ├── parquet.py
+│   │   └── repositories/
+│   │       ├── market_repository.py
+│   │       ├── account_repository.py
+│   │       ├── trade_repository.py
+│   │       ├── episode_repository.py
+│   │       └── model_repository.py
+│   │
+│   ├── api/
+│   │   ├── app.py
+│   │   ├── routes/
+│   │   │   ├── accounts.py
+│   │   │   ├── market.py
+│   │   │   ├── training.py
+│   │   │   ├── simulation.py
+│   │   │   └── models.py
+│   │   └── websocket/
+│   │       ├── market.py
+│   │       └── training.py
+│   │
+│   └── utils/
+│       ├── logger.py
+│       ├── math.py
+│       ├── time.py
+│       ├── ids.py
+│       └── serialization.py
+│
+├── database/
+│   ├── migrations/
+│   ├── schema/
+│   │   ├── market.sql
+│   │   ├── accounts.sql
+│   │   ├── trades.sql
+│   │   ├── training.sql
+│   │   └── models.sql
+│   └── seeds/
+│
+├── models/
+│   ├── pretrained/
+│   ├── checkpoints/
+│   ├── production/
+│   └── archived/
+│
+├── runs/
+│   ├── training/
+│   ├── simulation/
+│   ├── evaluation/
+│   └── paper_trading/
+│
+├── logs/
+│   ├── market/
+│   ├── training/
+│   ├── simulator/
+│   └── errors/
+│
+├── scripts/
+│   ├── collect_market_data.py
+│   ├── download_history.py
+│   ├── rebuild_orderbook.py
+│   ├── create_dataset.py
+│   ├── train.py
+│   ├── simulate.py
+│   ├── evaluate.py
+│   └── paper_trade.py
+│
+├── tests/
+│   ├── market/
+│   ├── exchange_simulator/
+│   ├── portfolio/
+│   ├── risk/
+│   ├── ai/
+│   ├── branching/
+│   ├── training/
+│   └── integration/
+│
+└── docs/
+    ├── architecture.md
+    ├── market-data.md
+    ├── virtual-exchange.md
+    ├── ai-state-action-reward.md
+    ├── branching-engine.md
+    ├── training.md
+    └── database.md
+
+Những module quan trọng nhất
+Với ý tưởng của bạn, tôi xem 8 khối này là lõi:
+market/
+    ↓ dữ liệu giá/orderbook thật
+
+historical_intelligence/
+    ↓ học lịch sử, tránh đoán mò
+
+portfolio/
+    ↓ tài khoản và tiền hoàn toàn ảo
+
+exchange_simulator/
+    ↓ giả lập sàn thật
+
+branching/
+    ↓ tạo N hướng đi song song
+
+simulation/
+    ↓ chạy hàng triệu cuộc đời
+
+training/
+    ↓ học từ tất cả kết quả
+
+paper_trading/
+    ↓ thi với thị trường realtime
+
+Đặc biệt branching/ là phần khá đặc thù cho ý tưởng của bạn:
+branching/
+├── branch_generator.py
+
+├── dimensions/
+│   ├── asset.py
+│   ├── direction.py
+│   ├── position_size.py
+│   ├── leverage.py
+│   ├── time_offset.py
+│   ├── latency.py
+│   ├── exit_time.py
+│   └── market_scenario.py
+
+├── pruning/
+│   ├── scorer.py
+│   ├── branch_pruner.py
+│   └── diversity_filter.py
+
+└── population/
+    ├── selection.py
+    ├── mutation.py
+    ├── crossover.py
+    └── novelty.py
+
+Một branch về bản chất có thể là:
+Branch #8F82A1
+
+Parent:
+    #172918
+
+Market:
+    BTCUSDT
+
+Action:
+    LONG
+
+Capital:
+    1,000 USDT
+
+Position:
+    17%
+
+Leverage:
+    2x
+
+Decision offset:
+    +7 ms
+
+Data latency:
+    4.3 ms
+
+Order latency:
+    8.1 ms
+
+Expected fill:
+    simulated from real orderbook
+
+Target:
+    10,000 USDT
+
+Sau đó branch này có thể tiếp tục sinh con:
+#8F82A1
+   │
+   ├── HOLD
+   ├── CLOSE 25%
+   ├── CLOSE 100%
+   ├── ADD 5%
+   ├── ADD 20%
+   ├── REVERSE SHORT
+   └── wait 10ms
+
+Đây là cây thư mục V1 mà tôi thấy khá phù hợp để phát triển dần từ collector dữ liệu thật → tài khoản ảo → simulator → branching → AI training, thay vì viết tất cả thành một bot khổng lồ ngay từ đầu.
+
+
+
+Đúng. Tóm gọn ý tưởng của bạn thành một hệ thống như sau:
+DỮ LIỆU THỊ TRƯỜNG THẬT
+WebSocket / trade tick / orderbook / funding / giá
+                 ↓
+        AI TRADING SYSTEM
+                 ↓
+TÀI KHOẢN ẢO ĐỘC LẬP
+- tiền ảo
+- số dư riêng
+- vị thế riêng
+- PnL riêng
+- margin riêng
+- không liên kết tài khoản sàn thật
+                 ↓
+AI RA QUYẾT ĐỊNH
+- coin nào
+- long / short / hold
+- số tiền
+- leverage
+- thời điểm vào
+- thời điểm thoát
+- tăng / giảm vị thế
+                 ↓
+SÀN GIAO DỊCH MÔ PHỎNG
+- giá thật tại thời điểm đó
+- bid / ask thật
+- spread
+- fee
+- funding
+- slippage
+- latency
+- partial fill
+- liquidation
+                 ↓
+KẾT QUẢ TRADE ẢO
+                 ↓
+LÃI / LỖ / RỦI RO
+                 ↓
+LƯU EXPERIENCE
+                 ↓
+AI HỌC
+                 ↓
+TRADE TIẾP
+
+Nghĩa là tiền giả nhưng thị trường thật
+Ví dụ bạn tạo:
+Account AI #000001
+
+Initial balance:
+1,000 USDT
+
+Target:
+10,000 USDT
+
+Đây chỉ là:
+balance = 1000
+
+trong database/RAM.
+Không có 1.000 USDT thật.
+Không API withdrawal.
+Không API đặt lệnh thật.
+Không liên kết tài khoản Binance/Bybit thật.
+Nhưng BTC ngoài thị trường đang:
+10:00:00.123
+BTCUSDT = 67,821.40
+
+AI quyết định:
+LONG BTC
+200 USDT
+3x
+
+Simulator thực hiện:
+Entry market price:      67,821.40
+Spread:                       ...
+Slippage:                     ...
+Entry fee:                    ...
+Effective entry:              ...
+Position notional:       600 USDT
+
+Sau đó giá thật tiếp tục:
+10:00:00.230   67,824
+10:00:00.412   67,819
+10:00:00.915   67,837
+10:00:01.120   67,850
+...
+
+Tài khoản ảo chuyển động theo chính dữ liệu đó.
+
+Không phải fake chart
+Điểm này rất quan trọng.
+Bạn không tạo:
+random BTC price
+
+cho chế độ realtime.
+Mà:
+Exchange
+   ↓
+REAL BTC trade
+   ↓
+WebSocket
+   ↓
+AI Simulator
+
+Sàn thật có trade:
+price     67,850
+qty       0.38 BTC
+side      buy
+time      10:00:01.120
+
+AI của bạn cũng nhìn thấy event đó.
+Nhưng AI đặt BUY thì chỉ simulator nhận order, Binance/Bybit không nhận gì cả.
+
+Có thể có hai chế độ
+1. Historical Replay
+Lấy dữ liệu đã xảy ra:
+BTC 2021
+BTC 2022
+BTC 2023
+BTC 2024
+BTC 2025
+...
+
+Replay lại đúng thứ tự:
+event 1
+event 2
+event 3
+...
+
+AI tưởng như đang sống tại thời điểm đó.
+Quan trọng là không cho AI nhìn trước tương lai.
+Ví dụ AI đang ở:
+2024-06-01 12:00:00.120
+
+thì nó chỉ được thấy dữ liệu:
+<= 12:00:00.120
+
+Không được đọc:
+12:00:00.121+
+
+Đây là nơi bạn có thể chạy hàng triệu lần nhanh hơn thời gian thực.
+
+2. Live Paper Trading
+Dùng thị trường hiện tại:
+Binance/Bybit websocket
+             ↓
+AI
+             ↓
+virtual account
+
+Thời gian chạy giống thị trường thật:
+1 giây thị trường
+=
+1 giây hệ thống
+
+Không thể tua nhanh tương lai vì tương lai chưa xảy ra.
+
+Và hai chế độ phải kết hợp
+Tôi sẽ làm:
+PHASE 1
+Historical Data
+      ↓
+100M+ simulation experiences
+
+PHASE 2
+Out-of-sample historical data
+      ↓
+AI chưa từng nhìn
+
+PHASE 3
+Live Market
+      ↓
+Paper Trading
+
+PHASE 4
+Tiếp tục đánh giá / retrain
+
+
+AI ban đầu không phải đoán mò
+Trước khi trade, nó có thể học dữ liệu lịch sử.
+Historical Market Database
+          ↓
+Feature extraction
+          ↓
+Market representation
+          ↓
+Historical pattern/model
+          ↓
+AI policy
+
+Khi realtime xuất hiện trạng thái:
+S_now
+
+AI có thể so với:
+S_history
+
+rồi đánh giá:
+những trạng thái tương tự trước đây
+→ sau 100ms thế nào?
+→ 1s?
+→ 10s?
+→ 1m?
+
+Sau đó mới sinh các hướng:
+HOLD
+LONG
+SHORT
+
+BTC
+ETH
+SOL
+...
+
+position 5%
+position 10%
+position 20%
+...
+
+1x
+2x
+3x
+...
+
+
+Còn hệ “nhiều nhánh” của bạn
+Một market state thật:
+BTC 67,821
+ETH 3,420
+...
+
+có thể được cấp cho:
+Virtual Account #1
+Virtual Account #2
+Virtual Account #3
+...
+Virtual Account #100,000
+
+Tất cả có cùng điểm xuất phát:
+$1,000
+
+nhưng thử khác nhau:
+#1 HOLD
+
+#2 BTC LONG 5%
+
+#3 BTC LONG 20%
+
+#4 BTC SHORT 5%
+
+#5 ETH LONG
+
+#6 SOL SHORT
+
+#7 BTC LONG chờ 10 ms
+
+#8 BTC LONG chờ 100 ms
+
+...
+
+Sau đó thị trường thật chạy tiếp và bạn biết mỗi quyết định dẫn đến đâu.
+Đó chính là thứ rất có giá trị cho việc học.
+
+Nhưng realtime có một hạn chế tự nhiên
+Giả sử bạn chạy:
+1,000,000 accounts
+
+trên BTC realtime.
+Sau 1 giây, tất cả đều chỉ có cùng một tương lai thị trường thật đã xảy ra.
+Cho nên realtime rất tốt để:
+kiểm nghiệm policy
+đo latency
+đo robustness
+paper trade
+
+Còn để tạo hàng tỷ kinh nghiệm nhanh, historical replay mới là động cơ chính.
+Nói đơn giản:
+HISTORY
+= phòng huấn luyện tốc độ cao
+
+REALTIME
+= kỳ thi trực tiếp
+
+
+Hệ hoàn chỉnh
+                   REAL EXCHANGES
+              Binance / Bybit / OKX
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+       Historical Data       Live WebSocket
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+                MARKET ENGINE
+                       │
+                       ▼
+                  AI BRAIN
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      Account 1    Account 2    Account N
+       $1000        $1000        $1000
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+              VIRTUAL EXCHANGE
+                       │
+       fee / funding / spread /
+       slippage / leverage /
+       latency / liquidation
+                       │
+                       ▼
+              EXPERIENCE ENGINE
+                       │
+                       ▼
+                  AI TRAINING
+                       │
+                       └───────↺
+
+Và nguyên tắc cốt lõi:
+
+Thị trường là thật. Dữ liệu là thật. Thời gian và biến động là thật. Nhưng tiền, vị thế và lệnh giao dịch hoàn toàn nằm trong simulator. Không có tiền thật nào bị đặt vào thị trường.
+
+Đây chính xác là nền tảng nên xây trước khi nghĩ tới phần AI phức tạp hơn.
+
+
+

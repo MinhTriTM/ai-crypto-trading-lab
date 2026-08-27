@@ -1,0 +1,37 @@
+exchanges:
+  binance:
+    enabled: true
+    testnet: false
+    ws_url: "wss://stream.binance.com:9443/ws"
+    rest_url: "https://api.binance.com"
+    streams:
+      - "trade"      # <symbol>@trade
+      - "depth@100ms" # <symbol>@depth@100ms
+      - "ticker"     # <symbol>@ticker
+    futures:
+      ws_url: "wss://fstream.binance.com/ws"
+      streams:
+        - "aggTrade"
+        - "depth@100ms"
+        - "markPrice@1s"
+        - "forceOrder"  # liquidations
+
+  bybit:
+    enabled: false
+    ws_url: "wss://stream.bybit.com/v5/public/spot"
+    rest_url: "https://api.bybit.com"
+
+  okx:
+    enabled: false
+    ws_url: "wss://ws.okx.com:8443/ws/v5/public"
+
+  coinbase:
+    enabled: false
+    ws_url: "wss://ws-feed.exchange.coinbase.com"
+
+collector:
+  reconnect_delay: 1.0
+  max_reconnect_attempts: 100
+  ping_interval: 20
+  buffer_size: 10000
+  flush_interval_ms: 100

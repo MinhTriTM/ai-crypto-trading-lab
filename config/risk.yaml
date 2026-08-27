@@ -1,0 +1,28 @@
+risk:
+  position_sizing:
+    max_position_pct: 0.25      # tối đa 25% vốn / lệnh
+    min_position_pct: 0.01
+    kelly_fraction: 0.5
+
+  exposure:
+    max_total_exposure: 2.0     # tổng notional / equity
+    max_single_asset_exposure: 0.5
+    max_open_positions: 5
+
+  drawdown:
+    max_drawdown_pct: 0.15      # dừng nếu drawdown >15%
+    trailing_stop_pct: 0.05
+
+  leverage:
+    max_leverage: 5
+    default_leverage: 2
+    margin_call_level: 0.8
+    liquidation_level: 0.5
+
+  bankruptcy:
+    stop_trading_threshold: 0.1  # dừng nếu equity <10% initial
+    reset_on_bankruptcy: false
+
+  branching:
+    max_branches_per_state: 100
+    prune_threshold: 0.3

@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS orders (
+    id VARCHAR(40) PRIMARY KEY,
+    account_id VARCHAR(20) REFERENCES accounts(id),
+    symbol VARCHAR(20) NOT NULL,
+    side VARCHAR(10) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    qty DOUBLE PRECISION NOT NULL,
+    price DOUBLE PRECISION,
+    leverage DOUBLE PRECISION,
+    status VARCHAR(20) NOT NULL,
+    timestamp BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS trades (
+    id VARCHAR(40) PRIMARY KEY,
+    order_id VARCHAR(40) REFERENCES orders(id),
+    account_id VARCHAR(20) REFERENCES accounts(id),
+    symbol VARCHAR(20) NOT NULL,
+    side VARCHAR(10) NOT NULL,
+    price DOUBLE PRECISION NOT NULL,
+    qty DOUBLE PRECISION NOT NULL,
+    fee DOUBLE PRECISION NOT NULL,
+    timestamp BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pnl_history (
+    account_id VARCHAR(20) REFERENCES accounts(id),
+    timestamp BIGINT NOT NULL,
+    equity DOUBLE PRECISION NOT NULL,
+    realized DOUBLE PRECISION NOT NULL,
+    unrealized DOUBLE PRECISION NOT NULL
+);

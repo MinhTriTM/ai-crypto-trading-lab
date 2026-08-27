@@ -1,0 +1,19 @@
+app:
+  name: "ai-crypto-trading-lab"
+  version: "0.1.0"
+  env: "development"  # development | staging | production
+  seed: 42
+  timezone: "UTC"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 2
+  reload: true
+
+paths:
+  data_dir: "data"
+  models_dir: "models"
+  runs_dir: "runs"
+  logs_dir: "logs"
+  config_dir: "config"

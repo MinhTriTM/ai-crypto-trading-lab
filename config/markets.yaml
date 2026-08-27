@@ -1,0 +1,35 @@
+markets:
+  spot:
+    - symbol: "BTCUSDT"
+      exchange: "binance"
+      tick_size: 0.01
+      lot_size: 0.00001
+    - symbol: "ETHUSDT"
+      exchange: "binance"
+      tick_size: 0.01
+      lot_size: 0.0001
+    - symbol: "SOLUSDT"
+      exchange: "binance"
+      tick_size: 0.01
+      lot_size: 0.01
+
+  futures:
+    - symbol: "BTCUSDT"
+      exchange: "binance"
+      contract_type: "PERPETUAL"
+      tick_size: 0.1
+      lot_size: 0.001
+      funding_interval_hours: 8
+    - symbol: "ETHUSDT"
+      exchange: "binance"
+      contract_type: "PERPETUAL"
+
+collection:
+  trades: true
+  orderbook: true
+  orderbook_depth: 20
+  funding: true
+  mark_price: true
+  liquidations: true
+  open_interest: true
+  snapshot_interval_ms: 1000
