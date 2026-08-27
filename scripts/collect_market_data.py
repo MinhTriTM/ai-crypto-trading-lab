@@ -1,10 +1,12 @@
 """Collect market data - chay collector va luu parquet."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import asyncio
 import argparse
 from pathlib import Path
 from src.market.collectors.binance_ws import BinanceWSCollector
 from src.storage.parquet import ParquetStore
-import pyarrow as pa
 
 async def main():
     parser = argparse.ArgumentParser()
