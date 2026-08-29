@@ -1,10 +1,10 @@
 """Liquidation."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from .maintenance_margin import MaintenanceMargin
 
 @dataclass
 class LiquidationEngine:
-    mm: MaintenanceMargin = MaintenanceMargin()
+    mm: MaintenanceMargin = field(default_factory=MaintenanceMargin)
     fee_rate: float = 0.001
 
     def check(self, equity: float, notional: float) -> bool:
