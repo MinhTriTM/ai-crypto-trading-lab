@@ -32,32 +32,69 @@ BINANCE_VISION = "https://data.binance.vision"
 INTERVALS = ["1m","3m","5m","15m","30m","1h","2h","4h","6h","8h","12h","1d","3d","1w","1M"]
 
 def get_all_symbols(market="spot", quote="USDT"):
+    # Thử Binance, nếu 451 thì fallback OKX hardcode
+    urls = []
     if market == "futures":
-        url = "https://fapi.binance.com/fapi/v1/exchangeInfo"
+        urls = ["https://fapi.binance.com/fapi/v1/exchangeInfo", "https://data-api.binance.vision/api/v3/exchangeInfo"]
     else:
-        url = "https://api.binance.com/api/v3/exchangeInfo"
-    r = requests.get(url, timeout=10)
-    r.raise_for_status()
-    data = r.json()
-    if market == "futures":
-        syms = [s["symbol"] for s in data["symbols"] if s["contractType"]=="PERPETUAL" and s["status"]=="TRADING" and s["quoteAsset"]==quote]
-    else:
-        syms = [s["symbol"] for s in data["symbols"] if s["status"]=="TRADING" and s["quoteAsset"]==quote]
-    return sorted(syms)
+        urls = ["https://api.binance.com/api/v3/exchangeInfo", "https://data-api.binance.vision/api/v3/exchangeInfo"]
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=10)
+            if r.status_code == 451:
+                continue
+            r.raise_for_status()
+            data = r.json()
+            if market == "futures":
+                syms = [s["symbol"] for s in data["symbols"] if s.get("contractType","PERPETUAL")=="PERPETUAL" and s["status"]=="TRADING" and s["quoteAsset"]==quote]
+            else:
+                syms = [s["symbol"] for s in data["symbols"] if s["status"]=="TRADING" and s["quoteAsset"]==quote]
+            if syms:
+                return sorted(syms)
+        except Exception:
+            continue
+    # Fallback hardcode top 50 nếu bị chặn hoàn toàn (Colab US)
+    print("  Warning: Binance 451, dung fallback hardcode top symbols")
+    fallback = ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","DOGEUSDT","TRXUSDT","AVAXUSDT","DOTUSDT","MATICUSDT","LINKUSDT","LTCUSDT","BCHUSDT","XLMUSDT","ATOMUSDT","ETCUSDT","FILUSDT","APTUSDT","ARBUSDT","OPUSDT","NEARUSDT","VETUSDT","ICPUSDT","HBARUSDT","STXUSDT","MKRUSDT","INJUSDT","GRTUSDT","RNDRUSDT","TAOUSDT","IMXUSDT","PEPEUSDT","FLOKIUSDT","SHIBUSDT","UNIUSDT","AAVEUSDT","XMRUSDT","ETCUSDT","EGLDUSDT","SUIUSDT","SEIUSDT","WLDUSDT","JUPUSDT","PYTHUSDT","BONKUSDT","WIFUSDT","BOMEUSDT","ENAUSDT","ONDOUSDT"]
+    return fallback[:50] if quote=="USDT" else fallback
 
 def get_top_symbols(market="spot", top=50):
-    # top theo quoteVolume 24h
+    # Thử Binance, nếu 451 thì fallback OKX
+    urls = []
     if market == "futures":
-        url = "https://fapi.binance.com/fapi/v1/ticker/24hr"
+        urls = ["https://fapi.binance.com/fapi/v1/ticker/24hr", "https://data-api.binance.vision/api/v3/ticker/24hr"]
     else:
-        url = "https://api.binance.com/api/v3/ticker/24hr"
-    r = requests.get(url, timeout=10)
-    r.raise_for_status()
-    tickers = r.json()
-    # lọc USDT
-    tickers = [t for t in tickers if t["symbol"].endswith("USDT")]
-    tickers.sort(key=lambda x: float(x.get("quoteVolume", 0)), reverse=True)
-    return [t["symbol"] for t in tickers[:top]]
+        urls = ["https://api.binance.com/api/v3/ticker/24hr", "https://data-api.binance.vision/api/v3/ticker/24hr"]
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=10)
+            if r.status_code == 451:
+                continue
+            r.raise_for_status()
+            tickers = r.json()
+            tickers = [t for t in tickers if t["symbol"].endswith("USDT")]
+            tickers.sort(key=lambda x: float(x.get("quoteVolume", 0)), reverse=True)
+            if tickers:
+                return [t["symbol"] for t in tickers[:top]]
+        except Exception:
+            continue
+    # Fallback OKX
+    try:
+        r = requests.get("https://www.okx.com/api/v5/market/tickers?instType=SPOT", timeout=10)
+        data = r.json()
+        if data.get("code")=="0":
+            tickers = data["data"]
+            # OKX instId BTC-USDT -> BTCUSDT
+            tickers = [t for t in tickers if t["instId"].endswith("USDT")]
+            tickers.sort(key=lambda x: float(x.get("volCcy24h",0)), reverse=True)
+            okx_syms = [t["instId"].replace("-","") for t in tickers[:top]]
+            if okx_syms:
+                print(f"  Fallback OKX top {top}: {okx_syms[:5]}...")
+                return okx_syms
+    except Exception:
+        pass
+    print("  Warning: all ticker APIs 451, dung hardcode")
+    return get_all_symbols(market)[:top]
 
 def fetch_vision_daily(symbol, interval, date_str, market="spot"):
     # date_str: 2024-01-01
@@ -78,31 +115,64 @@ def fetch_vision_daily(symbol, interval, date_str, market="spot"):
     return df
 
 def fetch_api_klines(symbol, interval, start_ms, end_ms=None, limit=1000, market="spot"):
+    bases = []
     if market == "futures":
-        url = "https://fapi.binance.com/fapi/v1/klines"
+        bases = ["https://fapi.binance.com", "https://data-api.binance.vision"]
     else:
-        url = "https://api.binance.com/api/v3/klines"
+        bases = ["https://api.binance.com", "https://data-api.binance.vision", "https://api1.binance.com"]
     params = {"symbol": symbol, "interval": interval, "limit": limit, "startTime": start_ms}
     if end_ms:
         params["endTime"] = end_ms
-    # retry với backoff khi 429
-    for attempt in range(5):
-        r = requests.get(url, params=params, timeout=10)
-        if r.status_code == 429:
-            wait = int(r.headers.get("Retry-After", 2 ** attempt))
-            print(f"  Rate limit 429, doi {wait}s...")
-            time.sleep(wait + random.uniform(0,1))
-            continue
-        r.raise_for_status()
+    for base in bases:
+        url = f"{base}/api/v3/klines" if market=="spot" else f"{base}/fapi/v1/klines"
+        if "vision" in base and market=="futures":
+            url = f"{base}/fapi/v1/klines"
+        for attempt in range(3):
+            try:
+                r = requests.get(url, params=params, timeout=10)
+                if r.status_code == 451:
+                    # thử base tiếp theo
+                    break
+                if r.status_code == 429:
+                    wait = int(r.headers.get("Retry-After", 2 ** attempt))
+                    print(f"  Rate limit 429 {base}, doi {wait}s...")
+                    time.sleep(wait + random.uniform(0,1))
+                    continue
+                r.raise_for_status()
+                data = r.json()
+                if isinstance(data, dict) and data.get("code")==0 and "msg" in data and "restricted" in data["msg"]:
+                    break
+                if not data:
+                    return []
+                weight = int(r.headers.get("x-mbx-used-weight-1m", 0))
+                if weight > 1000:
+                    time.sleep(0.5)
+                return data
+            except Exception as e:
+                if "451" in str(e) or "restricted" in str(e).lower():
+                    break
+                time.sleep(0.5)
+        # thử base tiếp
+    # Cuối cùng fallback OKX klines
+    try:
+        okx_sym = symbol.replace("USDT","-USDT")
+        # OKX cần bar=1H etc
+        okx_bar = {"1m":"1m","5m":"5m","15m":"15m","1h":"1H","4h":"4H","1d":"1D"}.get(interval, "1H")
+        r = requests.get(f"https://www.okx.com/api/v5/market/candles?instId={okx_sym}&bar={okx_bar}&limit={limit}", timeout=10)
         data = r.json()
-        if not data:
-            return []
-        # weight check
-        weight = int(r.headers.get("x-mbx-used-weight-1m", 0))
-        if weight > 1000:
-            time.sleep(0.5)
-        return data
-    raise RuntimeError(f"429 qua nhieu lan {symbol} {interval}")
+        if data.get("code")=="0" and data.get("data"):
+            # OKX trả [ts, o, h, l, c, vol, volCcy] ngược thời gian
+            okx_data = data["data"][::-1]  # đảo lại tăng dần
+            # chuyển sang dạng Binance klines: [open_time, open, high, low, close, volume, close_time, ...]
+            converted = []
+            for row in okx_data:
+                ts = int(row[0])
+                converted.append([ts, row[1], row[2], row[3], row[4], row[5], ts+60000, "0","0","0","0","0"])
+            print(f"  Fallback OKX klines {symbol} {interval} {len(converted)} nến")
+            return converted
+    except Exception:
+        pass
+    raise RuntimeError(f"All klines fallbacks failed {symbol} {interval} (451 restricted?)")
 
 def backfill_vision(symbol, interval, start_date, end_date, market, out_dir: Path):
     # Lap qua tung ngay, tai ZIP daily

@@ -49,14 +49,36 @@ class BinanceWSCollector(BaseCollector):
                 yield MarketEvent.from_raw(data, source='binance')
 
     async def fetch_snapshot(self, symbol: str):
-        url = f"https://api.binance.com/api/v3/depth?symbol={symbol}&limit=100"
+        # Thử Vision trước (không bị 451), rồi mới api.binance.com
+        for base in ["https://data-api.binance.vision", "https://api.binance.com", "https://api1.binance.com"]:
+            url = f"{base}/api/v3/depth?symbol={symbol}&limit=100"
+            try:
+                import aiohttp
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(url) as r:
+                        if r.status == 200:
+                            return await r.json()
+                        if r.status == 451:
+                            continue
+            except ImportError:
+                import requests
+                r = requests.get(url, timeout=5)
+                if r.status_code == 200:
+                    return r.json()
+                if r.status_code == 451:
+                    continue
+            except Exception:
+                continue
+        # fallback OKX
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as s:
-                async with s.get(url) as r:
-                    return await r.json()
-        except ImportError:
-            # fallback requests
             import requests
-            r = requests.get(url, timeout=5)
-            return r.json()
+            okx_sym = symbol.replace("USDT","-USDT")
+            r = requests.get(f"https://www.okx.com/api/v5/market/books?instId={okx_sym}&sz=20", timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("code")=="0":
+                    d = data["data"][0]
+                    return {"lastUpdateId": int(d["ts"]), "bids": d["bids"], "asks": d["asks"]}
+        except Exception:
+            pass
+        raise RuntimeError(f"Snapshot all fallbacks failed for {symbol}")
