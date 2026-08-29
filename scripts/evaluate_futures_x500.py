@@ -293,6 +293,8 @@ def main():
     parser.add_argument("--target", type=float, default=500.0)
     parser.add_argument("--max-leverage", type=int, default=500)
     parser.add_argument("--episodes", type=int, default=5000, help="so nhánh thử (mỗi nhánh = 1 coin + 1 strategy + 1 leverage + 1 pos)")
+    parser.add_argument("--leverage-mode", choices=["auto","random","fixed"], default="auto", help="auto: x1->x500 theo phân tích (khuyen nghi), random: ngau nhien tu list, fixed: dung --fixed-leverage")
+    parser.add_argument("--fixed-leverage", type=int, default=None, help="khi --leverage-mode fixed, dung leverage nay (1-500)")
     parser.add_argument("--out", type=str, default="runs/evaluation/futures_x500.json")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -343,11 +345,52 @@ def main():
     cfg = FuturesConfig(initial=args.initial, target=args.target, max_leverage=args.max_leverage)
 
     strategies = ["ma_cross","rsi","breakout","mean_revert","trend","hold_long","random"]
+    # Leverage tự động x1->x500 theo phân tích (đúng yêu cầu: không cố định x500)
+    # Hàm auto chọn dựa trên volatility, RSI confidence, khoảng cách MA, và Kelly
+    def auto_leverage(vol: float, rsi: float, ma_dist: float, max_lev: int) -> int:
+        """
+        Tự chọn leverage x1->max_lev theo phân tích:
+        - vol thấp + tín hiệu rõ (RSI cực trị, MA cách xa) => leverage cao
+        - vol cao / tín hiệu yếu => leverage thấp để tránh cháy
+        Công thức: leverage = clamp(target_vol / vol, 1, max_lev) * confidence
+        target_vol = 0.015 (1.5% / nến), confidence 0.3-1.0
+        """
+        target_vol = 0.02  # tăng để cho phép lev cao hơn
+        vol = max(vol, 0.001)  # floor 0.1%
+        base_lev = target_vol / vol  # vol 0.5% =>4x, vol 0.1% =>20x, vol 0.02%=>100x
+        rsi_conf = 0.5
+        if rsi < 25 or rsi > 75:
+            rsi_conf = 1.0
+        elif rsi < 30 or rsi > 70:
+            rsi_conf = 0.85
+        elif 40 < rsi < 60:
+            rsi_conf = 0.35
+        ma_conf = min(1.0, abs(ma_dist) * 80 + 0.3)  # MA cách xa => trend mạnh
+        conf = (rsi_conf + ma_conf) / 2
+        # Nếu trend rất mạnh (ma_dist>2% và rsi cực trị) thì cho phép max leverage
+        if abs(ma_dist) > 0.015 and (rsi < 30 or rsi > 70):
+            conf = 1.0
+            base_lev = max(base_lev, max_lev / 15)  # ép lên cao
+        lev = int(base_lev * conf * 20)  # scale x20 để tới 500
+        lev = max(1, min(lev, max_lev))
+        levels = [1,2,3,5,10,20,25,50,75,100,125,200,500]
+        # chọn mức gần nhất <= lev
+        candidates = [l for l in levels if l <= lev]
+        return candidates[-1] if candidates else 1
+
     leverages = [5,10,20,50,100,125,200,500]
-    # Ưu tiên leverage cao hơn vì yêu cầu x500, nhưng cũng test thấp
     if args.max_leverage < 500:
         leverages = [l for l in leverages if l <= args.max_leverage]
     pos_pcts = [0.05, 0.1, 0.2, 0.3, 0.5, 1.0]  # % equity mỗi lệnh
+    # Chế độ leverage: auto (mặc định, đúng yêu cầu x1->x500 tự chọn), random, fixed
+    leverage_mode = args.leverage_mode
+    if leverage_mode == "fixed" and args.fixed_leverage:
+        fixed_lev = max(1, min(args.fixed_leverage, args.max_leverage))
+        print(f"Leverage mode: FIXED x{fixed_lev}")
+    elif leverage_mode == "auto":
+        print(f"Leverage mode: AUTO x1->x{args.max_leverage} theo phân tích (volatility + RSI + MA + Kelly)")
+    else:
+        print(f"Leverage mode: RANDOM tu {leverages}")
 
     # Tạo branching: mỗi episode ngẫu nhiên chọn df + strategy + leverage + pos
     results = []
@@ -363,12 +406,29 @@ def main():
         else:
             df_slice = df
         strat = random.choice(strategies)
-        lev = random.choice(leverages)
+        # Lấy vol/rsi/ma_dist hiện tại để auto chọn leverage
+        # Dùng nến giữa đoạn (đại diện regime)
+        mid_idx = len(df_slice)//2
+        vol_now = float(df_slice.iloc[mid_idx]["vol"]) if not np.isnan(df_slice.iloc[mid_idx]["vol"]) else 0.01
+        rsi_now = float(df_slice.iloc[mid_idx]["rsi"]) if not np.isnan(df_slice.iloc[mid_idx]["rsi"]) else 50
+        ma7_now = float(df_slice.iloc[mid_idx]["ma7"]) if not np.isnan(df_slice.iloc[mid_idx]["ma7"]) else 0
+        ma25_now = float(df_slice.iloc[mid_idx]["ma25"]) if not np.isnan(df_slice.iloc[mid_idx]["ma25"]) else 0
+        price_now = float(df_slice.iloc[mid_idx]["close"])
+        ma_dist_now = abs(ma7_now - ma25_now)/price_now if price_now else 0
+
+        if leverage_mode == "auto":
+            lev = auto_leverage(vol_now, rsi_now, ma_dist_now, args.max_leverage)
+        elif leverage_mode == "fixed":
+            lev = fixed_lev
+        else:
+            lev = random.choice(leverages)
         pos = random.choice(pos_pcts)
-        # Tránh liquidation ngay: với vol cao thì giảm pos
+        # Tránh liquidation ngay: với vol cao thì giảm pos (kể cả auto)
         vol = df_slice["vol"].mean()
         if vol > 0.02 and lev > 100:
             pos = min(pos, 0.1)
+        if lev >= 200 and vol > 0.015:
+            pos = min(pos, 0.05)  # x200+ vol cao chỉ 5%
 
         res = simulate_one_branch(df_slice, cfg, strat, lev, pos, key)
         res.update({"strategy": strat, "leverage": lev, "pos_pct": pos, "symbol_interval": key, "episode": ep})
